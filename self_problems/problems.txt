@@ -1,0 +1,3 @@
+- angle between hands on clock
+- log(x)
+- list with two stacks
