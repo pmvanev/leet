@@ -82,7 +82,6 @@ class Roomba:
 
 
 class DFSAlgorithm:
-
     def __init__(self, roomba):
         self.roomba = roomba
         self.direction = roomba.direction
@@ -107,12 +106,13 @@ class DFSAlgorithm:
             return False
         self.position += direction
         self.path.append(self.position)
+        return True
 
     def already_cleaned(self, position):
-      for cleaned_position in self.cleaned_positions:
-        if np.array_equal(position, cleaned_position):
-          return True
-      return False
+        for cleaned_position in self.cleaned_positions:
+            if np.array_equal(position, cleaned_position):
+                return True
+        return False
 
     def try_go(self, direction):
         if self.already_cleaned(self.position + direction):
@@ -123,7 +123,7 @@ class DFSAlgorithm:
         self.roomba.clean()
         self.cleaned_positions.append(self.position)
 
-    def clean_path(self, direction):
+    def clean_recursive(self, direction):
         if not self.try_go(direction):
             return
         self.clean()
@@ -133,11 +133,27 @@ class DFSAlgorithm:
             if not np.array_equal(d, return_direction)
         ]
         for d in child_directions:
-            self.clean_path(d)
+            self.clean_recursive(d)
         self.go(return_direction)
 
-    def clean_room(self):
-        self.clean_path(DIRECTION.NONE)
+    def clean_room_recursive(self):
+        self.clean_recursive(DIRECTION.NONE)
+
+    def clean_iterative(self):
+        stack = DIRECTION.ALL
+        while len(stack) != 0:
+            direction = stack.pop()
+            self.clean()
+            if not self.try_go(direction): continue
+            return_direction = -direction
+            child_directions = [
+                d for d in DIRECTION.ALL
+                if not np.array_equal(d, return_direction)
+            ]
+            stack += child_directions
+
+    def clean_room_iterative(self):
+        self.clean_iterative()
 
 
 class TestDFSAlgorithm(unittest.TestCase):
@@ -151,12 +167,24 @@ class TestDFSAlgorithm(unittest.TestCase):
     ROOM_1 = np.array([[0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 1, 0, 0],
                        [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
     START_1 = np.array([1, 1])
+    ROOM_2 = np.array([[0, 0], [0, 0]])
+    START_2 = np.array([0, 0])
 
-    def test_clean_room(self):
-        roomba = Roomba(TestDFSAlgorithm.ROOM_1, TestDFSAlgorithm.START_1,
+    # def test_clean_room_recursive(self):
+    #     roomba = Roomba(TestDFSAlgorithm.ROOM_1, TestDFSAlgorithm.START_1,
+    #                     DIRECTION.UP)
+    #     algorithm = DFSAlgorithm(roomba)
+    #     algorithm.clean_room_recursive()
+    #     print(roomba.path)
+    #     print(roomba.cleaned)
+    #     print(roomba.position)
+    #     print(algorithm.path)
+
+    def test_clean_room_iterative(self):
+        roomba = Roomba(TestDFSAlgorithm.ROOM_2, TestDFSAlgorithm.START_2,
                         DIRECTION.UP)
         algorithm = DFSAlgorithm(roomba)
-        algorithm.clean_room()
+        algorithm.clean_room_iterative()
         print(roomba.path)
         print(roomba.cleaned)
         print(roomba.position)
