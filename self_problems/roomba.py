@@ -145,8 +145,9 @@ class DFSAlgorithm:
         self.clean_node(DIRECTION.NONE)
 
     def clean_room_iterative(self):
+        all_directions = [tuple(d) for d in DIRECTION.ALL]
         # so we get the same path as the recursive version
-        all_directions = [tuple(d) for d in DIRECTION.ALL.reverse()]
+        all_directions.reverse()
         stack = all_directions
         while len(stack) != 0:
             if tuple(self.position) not in self.cleaned_positions:
@@ -159,10 +160,11 @@ class DFSAlgorithm:
             stack.append(tuple(return_direction))
             child_directions = [
                 d for d in all_directions
-                if d != return_direction and not tuple(
+                if d != tuple(return_direction) and not tuple(
                     self.position + np.array(d)) in self.cleaned_positions +
                 self.blocked_positions
             ]
+            stack += child_directions
 
 
 class TestDFSAlgorithm(unittest.TestCase):
@@ -189,6 +191,32 @@ class TestDFSAlgorithm(unittest.TestCase):
                         DIRECTION.UP)
         algorithm = DFSAlgorithm(roomba)
         algorithm.clean_room_recursive()
+
+        # should have cleaned everywhere that's not blocked
+        blocked = TestDFSAlgorithm.ROOM == 1
+        self.assertTrue(np.array_equal(roomba.cleaned, ~(blocked)))
+
+        # should have finished where we started
+        self.assertTrue(np.array_equal(roomba.position,
+                                       TestDFSAlgorithm.START))
+        self.assertEqual(roomba.path[0], (1, 1))
+        self.assertTrue(np.array_equal(algorithm.position, np.array([0, 0])))
+        self.assertEqual(algorithm.path[0], (0, 0))
+
+        self.assertEqual(len(algorithm.path), len(roomba.path))
+        for i in range(len(algorithm.path)):
+            alg_pos = np.array(algorithm.path[i])
+            rmb_pos = np.array(roomba.path[i])
+            self.assertTrue(
+                np.array_equal(alg_pos, rmb_pos - TestDFSAlgorithm.START))
+        # print(f"algorithm.path = {algorithm.path}")
+        # print(f"roomba.path = {roomba.path}")
+
+    def test_clean_room_iterative(self):
+        roomba = Roomba(TestDFSAlgorithm.ROOM, TestDFSAlgorithm.START,
+                        DIRECTION.UP)
+        algorithm = DFSAlgorithm(roomba)
+        algorithm.clean_room_iterative()
 
         # should have cleaned everywhere that's not blocked
         blocked = TestDFSAlgorithm.ROOM == 1
