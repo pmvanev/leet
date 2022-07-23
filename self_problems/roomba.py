@@ -1,3 +1,4 @@
+from cgi import print_form
 import unittest
 import numpy as np
 
@@ -34,11 +35,24 @@ class DIRECTION:
         elif np.array_equal(direction, DIRECTION.LEFT):
             return DIRECTION.DOWN
 
+    def str(direction):
+        if np.array_equal(direction, DIRECTION.UP):
+            return "UP"
+        elif np.array_equal(direction, DIRECTION.RIGHT):
+            return "RIGHT"
+        elif np.array_equal(direction, DIRECTION.DOWN):
+            return "DOWN"
+        elif np.array_equal(direction, DIRECTION.LEFT):
+            return "LEFT"
+        elif np.array_equal(direction, DIRECTION.NONE):
+            return "NONE"
+        else:
+            return f"UNDEFINED {direction}"
+
 
 class Roomba:
     'encapsulate problem api constraint'
 
-    #TODO: implement for grid design
     def __init__(self, grid, position, direction):
         self.grid = grid
         self.position = position
@@ -53,7 +67,6 @@ class Roomba:
         self.direction = DIRECTION.right_of(self.direction)
 
     def can_move(self, position):
-        # TODO: extract self.grid.in_bounds(postion)
         rows, cols = self.grid.shape
         row_max = rows - 1
         col_max = cols - 1
@@ -63,9 +76,7 @@ class Roomba:
             return False
         if col < 0 or col > col_max:
             return False
-        # TODO: extract self.grid.is_open(position)
         return self.grid[row][col] == 0
-        # TODO: return self.grid.is_space(position) -> grid.in_bounds(p) and grid.is_open(p)
 
     def move(self):
         new_position = self.position + self.direction
@@ -87,6 +98,7 @@ class DFSAlgorithm:
         self.direction = roomba.direction
         self.position = np.array([0, 0])
         self.cleaned_positions = []
+        self.blocked_positions = []
         self.path = [self.position]
 
     def turn_right(self):
@@ -94,101 +106,100 @@ class DFSAlgorithm:
         self.direction = DIRECTION.right_of(self.direction)
 
     def face(self, direction):
-        # TODO: check for left turn
         while not np.array_equal(self.direction, direction):
             self.turn_right()
+
+    def clean(self):
+        self.roomba.clean()
+        print(f"adding {self.position} to cleaned_positions")
+        print(f"cleaned_positions before add = {self.cleaned_positions}")
+        self.cleaned_positions += [tuple(self.position)]
+        print(f"cleaned_positions after add = {self.cleaned_positions}")
 
     def go(self, direction):
         if np.array_equal(direction, DIRECTION.NONE):
             return True
         self.face(direction)
-        if not self.roomba.move():
-            return False
-        self.position += direction
-        self.path.append(self.position)
-        return True
+        if self.roomba.move():
+            self.position += self.direction
+            self.path.append(self.position)
+            return True
+        self.blocked_positions.append(self.position + direction)
+        return False
 
     def already_cleaned(self, position):
-        for cleaned_position in self.cleaned_positions:
-            if np.array_equal(position, cleaned_position):
+        return tuple(position) in self.cleaned_positions
+
+    def is_blocked(self, position):
+        for p in self.blocked_positions:
+            if np.array_equal(position, p):
                 return True
         return False
 
-    def try_go(self, direction):
-        if self.already_cleaned(self.position + direction):
-            return False
-        return self.go(direction)
-
-    def clean(self):
-        self.roomba.clean()
-        self.cleaned_positions.append(self.position)
-
-    def clean_recursive(self, direction):
-        if not self.try_go(direction):
+    def clean_node(self, direction):
+        print(
+            f"---------------------------{DFSAlgorithm.clean_node.stack_frame}-----------------------------"
+        )
+        DFSAlgorithm.clean_node.stack_frame += 1
+        print(
+            f"position = {self.position}, direction = {DIRECTION.str(direction)}"
+        )
+        print(f"moving to position {self.position + direction}")
+        if not self.go(direction):
+            print(f"couldn't go {DIRECTION.str(direction)}")
             return
+        print(f"cleaning new position = {self.position}")
         self.clean()
         return_direction = -direction
+        print(f"return_direction = {DIRECTION.str(return_direction)}")
         child_directions = [
             d for d in DIRECTION.ALL
             if not np.array_equal(d, return_direction)
+            and not self.already_cleaned(self.position + d)
+            and not self.is_blocked(self.position + d)
         ]
-        for d in child_directions:
-            self.clean_recursive(d)
-        self.go(return_direction)
+        print(
+            f"child_directions = {[DIRECTION.str(c) for c in child_directions]}"
+        )
+        for c in child_directions:
+            print(f"recursing on child direction {DIRECTION.str(c)}")
+            self.clean_node(c)
+        if not self.go(return_direction):
+            print("PANIC!!!")
+            exit()
 
-    def clean_room_recursive(self):
-        self.clean_recursive(DIRECTION.NONE)
+    def clean_room(self):
+        self.clean_node(DIRECTION.NONE)
 
-    def clean_iterative(self):
-        stack = DIRECTION.ALL
-        while len(stack) != 0:
-            direction = stack.pop()
-            self.clean()
-            if not self.try_go(direction): continue
-            return_direction = -direction
-            child_directions = [
-                d for d in DIRECTION.ALL
-                if not np.array_equal(d, return_direction)
-            ]
-            stack += child_directions
 
-    def clean_room_iterative(self):
-        self.clean_iterative()
+DFSAlgorithm.clean_node.stack_frame = 0
 
 
 class TestDFSAlgorithm(unittest.TestCase):
     '''
-      0 0 1 0 0
-      0 X 0 1 0
-      0 0 1 0 0
-      0 0 0 0 0
-      0 0 0 0 0
+      0 1 2 3 4
+     -1 0 1 2 3
+      ---------
+ 0 -1|0 0 1 0 0
+ 1  0|0 R 0 1 0
+ 2  1|0 0 1 0 0
+ 3  2|0 0 0 0 0
+ 4  3|0 0 0 0 0
     '''
-    ROOM_1 = np.array([[0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 1, 0, 0],
-                       [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
-    START_1 = np.array([1, 1])
-    ROOM_2 = np.array([[0, 0], [0, 0]])
-    START_2 = np.array([0, 0])
+    ROOM = np.array([[0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 1, 0, 0],
+                     [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
+    START = np.array([1, 1])
 
-    # def test_clean_room_recursive(self):
-    #     roomba = Roomba(TestDFSAlgorithm.ROOM_1, TestDFSAlgorithm.START_1,
-    #                     DIRECTION.UP)
-    #     algorithm = DFSAlgorithm(roomba)
-    #     algorithm.clean_room_recursive()
-    #     print(roomba.path)
-    #     print(roomba.cleaned)
-    #     print(roomba.position)
-    #     print(algorithm.path)
-
-    def test_clean_room_iterative(self):
-        roomba = Roomba(TestDFSAlgorithm.ROOM_2, TestDFSAlgorithm.START_2,
+    def test_clean_room(self):
+        roomba = Roomba(TestDFSAlgorithm.ROOM, TestDFSAlgorithm.START,
                         DIRECTION.UP)
         algorithm = DFSAlgorithm(roomba)
-        algorithm.clean_room_iterative()
-        print(roomba.path)
-        print(roomba.cleaned)
-        print(roomba.position)
-        print(algorithm.path)
+        algorithm.clean_room()
+        print(f"ROOM = \n{TestDFSAlgorithm.ROOM}")
+        print(f"roomba.path = {roomba.path}")
+        print(f"roomba.cleaned = {roomba.cleaned}")
+        print(f"roomba.position = {roomba.position}")
+        print(f"algorithm.path = {algorithm.path}")
 
 
 if __name__ == '__main__':
