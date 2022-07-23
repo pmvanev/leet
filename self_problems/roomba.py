@@ -141,8 +141,28 @@ class DFSAlgorithm:
             raise RuntimeError(
                 "Unable to return to previous tile. This shouldn't happen!!!")
 
-    def clean_room(self):
+    def clean_room_recursive(self):
         self.clean_node(DIRECTION.NONE)
+
+    def clean_room_iterative(self):
+        # so we get the same path as the recursive version
+        all_directions = [tuple(d) for d in DIRECTION.ALL.reverse()]
+        stack = all_directions
+        while len(stack) != 0:
+            if tuple(self.position) not in self.cleaned_positions:
+                self.clean()
+            direction = np.array(stack.pop())
+            if not self.go(direction):
+                continue
+            return_direction = -direction
+            # definitely returning to previous node
+            stack.append(tuple(return_direction))
+            child_directions = [
+                d for d in all_directions
+                if d != return_direction and not tuple(
+                    self.position + np.array(d)) in self.cleaned_positions +
+                self.blocked_positions
+            ]
 
 
 class TestDFSAlgorithm(unittest.TestCase):
@@ -164,11 +184,11 @@ class TestDFSAlgorithm(unittest.TestCase):
                      [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
     START = np.array([1, 1])
 
-    def test_clean_room(self):
+    def test_clean_room_recursive(self):
         roomba = Roomba(TestDFSAlgorithm.ROOM, TestDFSAlgorithm.START,
                         DIRECTION.UP)
         algorithm = DFSAlgorithm(roomba)
-        algorithm.clean_room()
+        algorithm.clean_room_recursive()
 
         # should have cleaned everywhere that's not blocked
         blocked = TestDFSAlgorithm.ROOM == 1
