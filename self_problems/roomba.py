@@ -125,7 +125,6 @@ class DFSAlgorithm:
         return True
 
     def clean_node(self, direction):
-        DFSAlgorithm.clean_node.stack_frame += 1
         if not self.go(direction):
             return
         self.clean()
@@ -144,9 +143,6 @@ class DFSAlgorithm:
 
     def clean_room(self):
         self.clean_node(DIRECTION.NONE)
-
-
-DFSAlgorithm.clean_node.stack_frame = 0
 
 
 class TestDFSAlgorithm(unittest.TestCase):
