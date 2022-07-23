@@ -1,9 +1,9 @@
-from cgi import print_form
 import unittest
 import numpy as np
 
 # Problem:
 # - roomba  -- TODO: desc.
+# TODO: logger
 
 
 class DIRECTION:
@@ -111,10 +111,7 @@ class DFSAlgorithm:
 
     def clean(self):
         self.roomba.clean()
-        print(f"adding {self.position} to cleaned_positions")
-        print(f"cleaned_positions before add = {self.cleaned_positions}")
         self.cleaned_positions += [tuple(self.position)]
-        print(f"cleaned_positions after add = {self.cleaned_positions}")
 
     def go(self, direction):
         if np.array_equal(direction, DIRECTION.NONE):
@@ -128,36 +125,22 @@ class DFSAlgorithm:
         return True
 
     def clean_node(self, direction):
-        print(
-            f"---------------------------{DFSAlgorithm.clean_node.stack_frame}-----------------------------"
-        )
         DFSAlgorithm.clean_node.stack_frame += 1
-        print(
-            f"position = {self.position}, direction = {DIRECTION.str(direction)}"
-        )
-        print(f"moving to position {self.position + direction}")
         if not self.go(direction):
-            print(f"couldn't go {DIRECTION.str(direction)}")
             return
-        print(f"cleaning new position = {self.position}")
         self.clean()
         return_direction = -direction
-        print(f"return_direction = {DIRECTION.str(return_direction)}")
         child_directions = [
             d for d in DIRECTION.ALL
             if not np.array_equal(d, return_direction)
             and not tuple(self.position +
                           d) in self.cleaned_positions + self.blocked_positions
         ]
-        print(
-            f"child_directions = {[DIRECTION.str(c) for c in child_directions]}"
-        )
         for c in child_directions:
-            print(f"recursing on child direction {DIRECTION.str(c)}")
             self.clean_node(c)
         if not self.go(return_direction):
-            print("PANIC!!!")
-            exit()
+            raise RuntimeError(
+                "Unable to return to previous tile. This shouldn't happen!!!")
 
     def clean_room(self):
         self.clean_node(DIRECTION.NONE)
@@ -168,14 +151,18 @@ DFSAlgorithm.clean_node.stack_frame = 0
 
 class TestDFSAlgorithm(unittest.TestCase):
     '''
-      0 1 2 3 4
-     -1 0 1 2 3
-      ---------
- 0 -1|0 0 1 0 0
- 1  0|0 R 0 1 0
- 2  1|0 0 1 0 0
- 3  2|0 0 0 0 0
- 4  3|0 0 0 0 0
+             0 1 2 3 4  roomba coord frame
+            -1 0 1 2 3  alg coord frame
+            ---------
+        0 -1|0 0 1 0 0
+        1  0|0 R 0 1 0
+        2  1|0 0 1 0 0
+        3  2|0 0 0 0 0
+        4  3|0 0 0 0 0
+
+        R: roomba start position
+        0: empty tile
+        1: blocked tile
     '''
     ROOM = np.array([[0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 1, 0, 0],
                      [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
@@ -186,12 +173,26 @@ class TestDFSAlgorithm(unittest.TestCase):
                         DIRECTION.UP)
         algorithm = DFSAlgorithm(roomba)
         algorithm.clean_room()
-        print(f"ROOM = \n{TestDFSAlgorithm.ROOM}")
-        print(f"roomba.path = {roomba.path}")
-        print(f"roomba.cleaned = \n{roomba.cleaned}")
-        print(f"roomba.position = {roomba.position}")
-        print(f"algorithm.path = {algorithm.path}")
-        print(f"algorithm.position = {algorithm.position}")
+
+        # should have cleaned everywhere that's not blocked
+        blocked = TestDFSAlgorithm.ROOM == 1
+        self.assertTrue(np.array_equal(roomba.cleaned, ~(blocked)))
+
+        # should have finished where we started
+        self.assertTrue(np.array_equal(roomba.position,
+                                       TestDFSAlgorithm.START))
+        self.assertEqual(roomba.path[0], (1, 1))
+        self.assertTrue(np.array_equal(algorithm.position, np.array([0, 0])))
+        self.assertEqual(algorithm.path[0], (0, 0))
+
+        self.assertEqual(len(algorithm.path), len(roomba.path))
+        for i in range(len(algorithm.path)):
+            alg_pos = np.array(algorithm.path[i])
+            rmb_pos = np.array(roomba.path[i])
+            self.assertTrue(
+                np.array_equal(alg_pos, rmb_pos - TestDFSAlgorithm.START))
+        # print(f"algorithm.path = {algorithm.path}")
+        # print(f"roomba.path = {roomba.path}")
 
 
 if __name__ == '__main__':
