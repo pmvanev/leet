@@ -58,7 +58,7 @@ class Roomba:
         self.position = position
         self.direction = direction
         self.cleaned = np.zeros(grid.shape)
-        self.path = [self.position]
+        self.path = [tuple(self.position)]
 
     def turn_left(self):
         self.direction = DIRECTION.left_of(self.direction)
@@ -83,7 +83,7 @@ class Roomba:
         if not self.can_move(new_position):
             return False
         self.position = new_position
-        self.path.append(self.position)
+        self.path.append(tuple(self.position))
         return True
 
     def clean(self):
@@ -99,7 +99,7 @@ class DFSAlgorithm:
         self.position = np.array([0, 0])
         self.cleaned_positions = []
         self.blocked_positions = []
-        self.path = [self.position]
+        self.path = [tuple(self.position)]
 
     def turn_right(self):
         self.roomba.turn_right()
@@ -120,21 +120,12 @@ class DFSAlgorithm:
         if np.array_equal(direction, DIRECTION.NONE):
             return True
         self.face(direction)
-        if self.roomba.move():
-            self.position += self.direction
-            self.path.append(self.position)
-            return True
-        self.blocked_positions.append(self.position + direction)
-        return False
-
-    def already_cleaned(self, position):
-        return tuple(position) in self.cleaned_positions
-
-    def is_blocked(self, position):
-        for p in self.blocked_positions:
-            if np.array_equal(position, p):
-                return True
-        return False
+        if not self.roomba.move():
+            self.blocked_positions.append(tuple(self.position + direction))
+            return False
+        self.position += self.direction
+        self.path.append(tuple(self.position))
+        return True
 
     def clean_node(self, direction):
         print(
@@ -155,8 +146,8 @@ class DFSAlgorithm:
         child_directions = [
             d for d in DIRECTION.ALL
             if not np.array_equal(d, return_direction)
-            and not self.already_cleaned(self.position + d)
-            and not self.is_blocked(self.position + d)
+            and not tuple(self.position +
+                          d) in self.cleaned_positions + self.blocked_positions
         ]
         print(
             f"child_directions = {[DIRECTION.str(c) for c in child_directions]}"
@@ -197,9 +188,10 @@ class TestDFSAlgorithm(unittest.TestCase):
         algorithm.clean_room()
         print(f"ROOM = \n{TestDFSAlgorithm.ROOM}")
         print(f"roomba.path = {roomba.path}")
-        print(f"roomba.cleaned = {roomba.cleaned}")
+        print(f"roomba.cleaned = \n{roomba.cleaned}")
         print(f"roomba.position = {roomba.position}")
         print(f"algorithm.path = {algorithm.path}")
+        print(f"algorithm.position = {algorithm.position}")
 
 
 if __name__ == '__main__':
