@@ -1,3 +1,4 @@
+from cgi import print_form
 import unittest
 import numpy as np
 
@@ -124,6 +125,14 @@ class DFSAlgorithm:
         self.path.append(tuple(self.position))
         return True
 
+    def already_cleaned(self, position):
+        return tuple(self.position) in self.cleaned_positions
+
+    def already_visited(self, direction):
+        return tuple(
+            self.position +
+            direction) in self.cleaned_positions + self.blocked_positions
+
     def clean_node(self, direction):
         if not self.go(direction):
             return
@@ -132,8 +141,7 @@ class DFSAlgorithm:
         child_directions = [
             d for d in DIRECTION.ALL
             if not np.array_equal(d, return_direction)
-            and not tuple(self.position +
-                          d) in self.cleaned_positions + self.blocked_positions
+            and not self.already_visited(d)
         ]
         for c in child_directions:
             self.clean_node(c)
@@ -148,23 +156,31 @@ class DFSAlgorithm:
         all_directions = [tuple(d) for d in DIRECTION.ALL]
         # so we get the same path as the recursive version
         all_directions.reverse()
-        stack = all_directions
+        stack = all_directions.copy()
+        self.clean()
         while len(stack) != 0:
-            if tuple(self.position) not in self.cleaned_positions:
-                self.clean()
+            print(f"pos = {self.position}")
+            print(f"stack = {[DIRECTION.str(np.array(s)) for s in stack]}")
             direction = np.array(stack.pop())
-            if not self.go(direction):
+            if not self.go(direction) or self.already_cleaned(self.position):
+                print(f"can't go {DIRECTION.str(direction)}")
                 continue
+            print(f"moved {DIRECTION.str(direction)}")
+            print(f"cleaning {self.position}")
+            self.clean()
             return_direction = -direction
+            print(f"return_direction = {DIRECTION.str(return_direction)}")
             # definitely returning to previous node
             stack.append(tuple(return_direction))
-            child_directions = [
-                d for d in all_directions
-                if d != tuple(return_direction) and not tuple(
-                    self.position + np.array(d)) in self.cleaned_positions +
-                self.blocked_positions
-            ]
-            stack += child_directions
+            for d in all_directions:
+                if not self.already_visited(d):
+                    print(f"pushing {DIRECTION.str(d)} to stack")
+                    stack.append(d)
+                else:
+                    print(
+                        f"already visited {DIRECTION.str(np.array(d))}, not pushing"
+                    )
+            print(f"new stack = {[DIRECTION.str(np.array(s)) for s in stack]}")
 
 
 class TestDFSAlgorithm(unittest.TestCase):
@@ -220,6 +236,9 @@ class TestDFSAlgorithm(unittest.TestCase):
 
         # should have cleaned everywhere that's not blocked
         blocked = TestDFSAlgorithm.ROOM == 1
+        print(f"{roomba.cleaned}")
+        print(f"algorithm.path = {algorithm.path}")
+        print(f"roomba.path = {roomba.path}")
         self.assertTrue(np.array_equal(roomba.cleaned, ~(blocked)))
 
         # should have finished where we started
@@ -235,8 +254,9 @@ class TestDFSAlgorithm(unittest.TestCase):
             rmb_pos = np.array(roomba.path[i])
             self.assertTrue(
                 np.array_equal(alg_pos, rmb_pos - TestDFSAlgorithm.START))
-        # print(f"algorithm.path = {algorithm.path}")
-        # print(f"roomba.path = {roomba.path}")
+
+        print(f"algorithm.path = {algorithm.path}")
+        print(f"roomba.path = {roomba.path}")
 
 
 if __name__ == '__main__':
