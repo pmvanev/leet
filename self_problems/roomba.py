@@ -159,28 +159,18 @@ class DFSAlgorithm:
         stack = all_directions.copy()
         self.clean()
         while len(stack) != 0:
-            print(f"pos = {self.position}")
-            print(f"stack = {[DIRECTION.str(np.array(s)) for s in stack]}")
             direction = np.array(stack.pop())
             if not self.go(direction) or self.already_cleaned(self.position):
-                print(f"can't go {DIRECTION.str(direction)}")
                 continue
-            print(f"moved {DIRECTION.str(direction)}")
-            print(f"cleaning {self.position}")
             self.clean()
             return_direction = -direction
-            print(f"return_direction = {DIRECTION.str(return_direction)}")
-            # definitely returning to previous node
             stack.append(tuple(return_direction))
-            for d in all_directions:
-                if not self.already_visited(d):
-                    print(f"pushing {DIRECTION.str(d)} to stack")
-                    stack.append(d)
-                else:
-                    print(
-                        f"already visited {DIRECTION.str(np.array(d))}, not pushing"
-                    )
-            print(f"new stack = {[DIRECTION.str(np.array(s)) for s in stack]}")
+            child_directions = [
+                d for d in DIRECTION.ALL
+                if not np.array_equal(d, return_direction)
+                and not self.already_visited(d)
+            ]
+            stack += child_directions
 
 
 class TestDFSAlgorithm(unittest.TestCase):
