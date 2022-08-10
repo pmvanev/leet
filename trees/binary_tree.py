@@ -1,5 +1,14 @@
+from lib2to3.pytree import Node
 import unittest
 
+class Node:
+    def __init__(self, key=None, left_child=None, right_child=None):
+        self.left_child = left_child
+        self.right_child = right_child
+        self.key = key
+
+    def children(self):
+        return [self.left_child, self.right_child]
 
 class BinaryTree:
     ''' Binary tree, indexed in breadth first order:
@@ -10,27 +19,21 @@ class BinaryTree:
                7 8    9 10    11 12   13 14
                 ...etc.
     '''
-
-    class Node:
-
-        def __init__(self,
-                     key=None,
-                     parent=None,
-                     left_child=None,
-                     right_child=None):
-            self.parent = parent
-            self.left_child = left_child
-            self.right_child = right_child
-            self.key = key
-
-    def __init__(self):
-        self.root = None
+    def __init__(self, keys):
+        self.root = None 
+        for key in keys:
+            self.add_key(key)
 
     def key_list(self):
-        if self.root is None:
-            return []
+        keys = []
+        nodes_to_visit = [self.root]
 
-        keys = [self.root.key]
+        while len(nodes_to_visit) != 0:
+            current_node = nodes_to_visit.pop(0)
+            if current_node is None:
+                continue
+            keys.append(current_node.key)
+            nodes_to_visit += current_node.children()
 
         return keys
 
@@ -46,12 +49,32 @@ class BinaryTree:
     def __getitem__(self, index):
         return self.key_list()[index]
 
+    def add_key(self, key):
+        if self.root == None:
+            self.root = Node(key)
+            return
+        nodes_to_visit = [self.root]
+        while len(nodes_to_visit) != 0:
+            current_node = nodes_to_visit.pop(0)
+            if not current_node.left_child:
+                current_node.left_child = Node(key)
+                return
+            elif not current_node.right_child:
+                current_node.right_child = Node(key)
+                return
+            else:
+                nodes_to_visit += current_node.children()
+
+    def add_keys(self, keys):
+        # TODO: more efficient add of multiple keys
+        pass
 
 class TestBinaryTree(unittest.TestCase):
+    def test_add_keys(self):
+        key_list = [0,1,2,3,4,5,6,7,8,9,10]
+        binary_tree = BinaryTree(key_list)
+        self.assertEqual(binary_tree.key_list(), key_list)
 
-    def test_insert(self):
-
-        pass
 
 
 if __name__ == '__main__':
