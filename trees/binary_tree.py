@@ -1,4 +1,3 @@
-from lib2to3.pytree import Node
 import unittest
 
 class Node:
@@ -9,6 +8,17 @@ class Node:
 
     def children(self):
         return [self.left_child, self.right_child]
+
+    def add_child(self, node):
+        if not self.left_child:
+            self.left_child = node
+        elif not self.right_child:
+            self.right_child = node
+        else:
+            raise RuntimeError("node already full, can't add child")
+
+    def has_vacancy(self):
+        return None in self.children()
 
 class BinaryTree:
     ''' Binary tree, indexed in breadth first order:
@@ -50,25 +60,16 @@ class BinaryTree:
         return self.key_list()[index]
 
     def add_key(self, key):
-        if self.root == None:
+        if self.root is None:
             self.root = Node(key)
             return
-        nodes_to_visit = [self.root]
-        while len(nodes_to_visit) != 0:
+        nodes_to_visit = []
+        current_node = self.root
+        while not current_node.has_vacancy():
+            nodes_to_visit += current_node.children()
             current_node = nodes_to_visit.pop(0)
-            if not current_node.left_child:
-                current_node.left_child = Node(key)
-                return
-            elif not current_node.right_child:
-                current_node.right_child = Node(key)
-                return
-            else:
-                nodes_to_visit += current_node.children()
-
-    def add_keys(self, keys):
-        # TODO: more efficient add of multiple keys
-        pass
-
+        current_node.add_child(Node(key))
+        
 class TestBinaryTree(unittest.TestCase):
     def test_add_keys(self):
         key_list = [0,1,2,3,4,5,6,7,8,9,10]
