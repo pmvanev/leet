@@ -1,3 +1,4 @@
+import os
 import unittest
 
 class Node:
@@ -69,12 +70,34 @@ class BinaryTree:
             nodes_to_visit += current_node.children()
             current_node = nodes_to_visit.pop(0)
         current_node.add_child(Node(key))
+
+    def serialize_to(self, filename):
+        'serialize to csv file of keys in depth first order'
+        with open(filename, 'w') as serial_file:
+            pass
         
+    @staticmethod
+    def deserialize_from(filename):
+        'deserialize csv file of keys in depth first order'
+        with open(filename, 'r') as serial_file:
+            pass
+        return BinaryTree([])
+
 class TestBinaryTree(unittest.TestCase):
     def test_add_keys(self):
         key_list = [0,1,2,3,4,5,6,7,8,9,10]
         binary_tree = BinaryTree(key_list)
         self.assertEqual(binary_tree.key_list(), key_list)
+
+    def test_serialize(self):
+        key_list = [0,1,2,3,4,5,6,7,8,9,10]
+        start_tree = BinaryTree(key_list)
+        serial_file = 'serial.csv'
+        start_tree.serialize_to(serial_file)
+        end_tree = BinaryTree.deserialize_from(serial_file)
+        os.system(f"rm {serial_file}")
+        self.assertEqual(start_tree.key_list(), end_tree.key_list())
+            
 
 
 
