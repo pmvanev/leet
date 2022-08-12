@@ -80,17 +80,40 @@ class BinaryTree:
         for child_node in node.children():
             self._serialize_to(serial_file, child_node)
 
-    def serialize_to(self, filename):
+    def serialize_to_file(self, filename):
         'serialize to csv file of keys in depth first order'
         with open(filename, 'w') as serial_file:
             self._serialize_to(serial_file, self.root)
+
+    @staticmethod
+    def deserialize_to(depth_first_list, node):
+        if len(depth_first_list) <= 2: # list ends with two 'None's
+            return 
+        left_key = depth_first_list.pop(0)
+        if left_key != str(None):
+            node.left_child = Node(int(left_key))
+            BinaryTree.deserialize_to(depth_first_list, node.left_child)
+        right_key = depth_first_list.pop(0)
+        if right_key != str(None):
+            node.right_child = Node(int(right_key))
+            BinaryTree.deserialize_to(depth_first_list, node.right_child)
+
+    def deserialize_from_list(self, depth_first_list):
+        if len(depth_first_list) == 0 or depth_first_list[0] == str(None):
+            return 
+        self.root = Node(int(depth_first_list.pop(0)))
+        self.deserialize_to(depth_first_list, self.root)
+        
         
     @staticmethod
-    def deserialize_from(filename):
+    def deserialize_from_file(serial_filename):
         'deserialize csv file of keys in depth first order'
-        with open(filename, 'r') as serial_file:
-            pass
-        return BinaryTree([])
+        with open(serial_filename, 'r') as serial_file:
+            depth_first_list = serial_file.readline().split(serial_file_delimiter)[:-1] 
+            depth_first_list = depth_first_list[:-1] # cut off trailing space from final delimeter
+        binary_tree = BinaryTree([])
+        binary_tree.deserialize_from_list(depth_first_list)
+        return binary_tree
 
 class TestBinaryTree(unittest.TestCase):
     def test_add_keys(self):
@@ -102,18 +125,13 @@ class TestBinaryTree(unittest.TestCase):
         key_list = [0,1,2,3,4,5,6,7,8,9]
         expected_serialization = '0, 1, 3, 7, None, None, 8, None, None, 4, 9, None, None, None, 2, 5, None, None, 6, None, None, '
         start_tree = BinaryTree(key_list)
-        serial_file = 'serial.csv'
-        start_tree.serialize_to(serial_file)
-        end_tree = BinaryTree.deserialize_from(serial_file)
-        with open(serial_file) as f:
-            actual_serialization = f.readline()
-            print(actual_serialization)
-            self.assertEqual(actual_serialization, expected_serialization)
-        # end_tree.deserialize_from(serial_file)
-        os.system(f"rm {serial_file}")
-        # self.assertEqual(start_tree.key_list(), end_tree.key_list())
-            
-
+        serial_filename = 'serial.csv'
+        start_tree.serialize_to_file(serial_filename)
+        with open(serial_filename) as f:
+            self.assertEqual(f.readline(), expected_serialization)
+        end_tree = BinaryTree.deserialize_from_file(serial_filename)
+        self.assertEqual(start_tree.key_list(), end_tree.key_list())
+        os.system(f"rm {serial_filename}")
 
 
 if __name__ == '__main__':
