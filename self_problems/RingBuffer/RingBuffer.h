@@ -1,5 +1,5 @@
 
-template <typename item_t> class RingBuffer {
+template <class item_t> class RingBuffer {
 public:
   RingBuffer(size_t size)
       : m_size(size), m_buffer(std::make_unique<item_t[]>(size)), m_head(0),
@@ -37,5 +37,5 @@ private:
   unsigned m_items{0};
 };
 
-// NOTE: for pointer storate, simply use
+// NOTE: for pointer storage, simply use
 // RingBuffer<std::shared_ptr<T>>(n_pointers);

@@ -9,3 +9,4 @@ set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
 
 add_subdirectory(trees/cpp)
+add_subdirectory(self_problems)
